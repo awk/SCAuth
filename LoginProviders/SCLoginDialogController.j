@@ -9,6 +9,7 @@
  */
 
 @import <AppKit/CPWindowController.j>
+@import <AppKit/CPCookie.j>
 @import "../AccountValidators/SCAccountValidator.j"
 
 var DefaultLoginDialogController    = nil,
@@ -211,8 +212,12 @@ SCLoginFailed = 1;
         loginObject     = {'username' : username, 'password' : password, 'remember' : shouldRemember},
         request         = [CPURLRequest requestWithURL:[[CPBundle mainBundle] objectForInfoDictionaryKey:@"SCAuthLoginURL"] || @"/session/"];
 
+     var csrfCookie = [[CPCookie alloc] initWithName:"csrftoken"];
+
     [request setHTTPMethod:@"POST"];
     [request setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
+    if ([csrfCookie value] != nil)
+       [request setValue:[csrfCookie value] forHTTPHeaderField:@"X-CSRFToken"];
     [request setHTTPBody:[CPString JSONFromObject:loginObject]];
     _loginConnection = [_connectionClass connectionWithRequest:request delegate:self];
     _loginConnection.username = username;
@@ -301,6 +306,9 @@ SCLoginFailed = 1;
 /* @ignore */
 - (void)_checkUser
 {
+   if ([[CPBundle mainBundle] objectForInfoDictionaryKey:@"SCAuthUserCheckURL"] == "disabled")
+      return;
+
     [_userCheckSpinner setHidden:NO];
 
     var request = [CPURLRequest requestWithURL:([[CPBundle mainBundle] objectForInfoDictionaryKey:@"SCAuthUserCheckURL"] || @"/user/") + [_userField stringValue]];
